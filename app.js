@@ -1,43 +1,6 @@
-var states = [
-	{label:'a', y:60, x:20},
-	{label:'b0', y:30, x:100},
-	{label:'b1', y:90, x:100},
-	{label:'d0', y:30, x:180},
-	{label:'d1', y:90, x:180},
-	{label:'c', y:60, x:260}
-]
-
-var transitions = [
-
-	{label: 'x', y: 60, x: 60,
-		pre: {a: 1},
-		post: {
-			b0: 1,
-			b1: 1
-		}
-	},
-
-	{label: 'z0', y: 30, x: 140,
-		pre: {b0: 1},
-		post: {d0: 1}
-	},
-
-	{label: 'z1', y: 90, x: 140,
-		pre: {b1: 1},
-		post: {d1: 1}
-	},
-
-	{label: 'y', y: 60, x: 220,
-		pre: {
-			d0: 1,
-			d1: 1
-		},
-		post: {c: 1}}
-];
-
-var marking = {a: 1, d0: 1};
-
-(states.concat(transitions)).forEach(function(s){s.x *= 1.25;})
+var r = 10;
+var w = 10;
+var h = 10;
 
 var svg = d3.select('body')
 	.append('svg')
@@ -60,32 +23,18 @@ svg.append('svg:defs').append('svg:marker')
 		fill: 'black'
 	});
 
-svg.selectAll(".state")
+var places = svg.append('g');
+
+places.selectAll("circle")
 	.data(states)
 	.enter()
-		.append("svg:circle")
+		.append("circle")
 		.attr({
-			r: 10,
+			r: r,
 			fill: 'rgba(0,255,255,.2)',
 			stroke: 'black',
 			cx: function(d) { return d.x - .5},
 			cy: function(d) { return d.y - .5}
-		});
-
-var w = 10;
-var h = 10;
-
-svg.selectAll("g.transition")
-	.data(transitions)
-	.enter()
-		.append("svg:rect")
-		.attr({
-			fill: 'rgba(0,0,255,.3)',
-			stroke: 'black',
-			x: function(d) { return d.x - w - .5},
-			y: function(d) { return d.y - h - .5},
-			width: w * 2,
-			height: h * 2
 		});
 
 // take a multiset dictionary 'label => multiplicity'
@@ -103,39 +52,11 @@ function mapLocations(mset) {
 	);
 } 
 
-var arcs = transitions.reduce(function(arcs, t){
-
-	var incoming = mapLocations(t.pre).map(function(arc){
-		return {
-			x1: arc.x,
-			y1: arc.y,
-			x2: t.x,
-			y2: t.y,
-			incoming: true,
-			weight: arc.weight
-		}
-	});
-	
-	var outgoing = mapLocations(t.post).map(function(arc){
-		return {
-			x1: t.x,
-			y1: t.y,
-			x2: arc.x,
-			y2: arc.y,
-			incoming: false,
-			weight: arc.weight
-		}
-	});
-	
-	return arcs.concat(incoming).concat(outgoing);
-
-}, []);
-
 // construct SVG line from arc
-var arcD = function(arc) { return 'M ' + arc.x1 + ',' + arc.y1 + 'L ' + arc.x2 + ',' + arc.y2; };
+var arcPathToCenter = function(arc) { return 'M ' + arc.x1 + ',' + arc.y1 + 'L ' + arc.x2 + ',' + arc.y2; };
 
-
-var test = function( d) {
+// construct SVG line from arc, trying to be smart about the shapes and length of arc
+var arcPath = function( d) {
     var deltaX = d.x2 - d.x1,
     deltaY = d.y2 - d.y1,
     dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY),
@@ -150,36 +71,99 @@ var test = function( d) {
     return 'M' + sourceX + ',' + sourceY + 'L' + targetX + ',' + targetY;
 };
 
-svg.selectAll( "g.arc")
-	.data(arcs)
-	.enter()
-	.append("path")
-	.style('marker-end', 'url(#arrow)')
-	.attr({
-		d: test,
-		stroke: 'black',
-		strokeWidth: 1
-	});
-	
-var tokens = _.map(marking, function(val, key){
-	return {
-		state: key,
-		tokens: val
-	}
-})
+var Arcs = svg.append('g');
 
-svg.selectAll( "g.token")
-	.data(tokens)
+Arcs.selectAll("path")
+	.data(arcs(transitions))
 	.enter()
-		.append("circle")
+		.append("path")
+		.style('marker-end', 'url(#arrow)')
 		.attr({
-			r: 3,
-			fill: 'black',
-			stroke: 'none',
-			cx: function(d) {
-				return _.find(states, 'label', d.state).x - .5;
-			},
-			cy: function(d) {
-				return _.find(states, 'label', d.state).y - .5;
-			}
+			d: arcPath,
+			stroke: 'black',
+			strokeWidth: 1
 		});
+
+var transitionG = svg.append('g');
+
+function tokens(){
+	return _.map(marking, function(val, key){
+		return {
+			state: key,
+			tokens: val
+		}
+	})
+}
+
+var tokensG = svg.append('g');
+
+function redrawTransitions()
+{
+	var transitionSvg = transitionG.selectAll("rect")
+			.data(transitions);
+
+	// create or update
+	transitionSvg.enter()
+		.append("rect")
+		.attr({
+			stroke: 'black',
+			width: w * 2,
+			height: h * 2
+		})
+		.on('click', function(t){
+			// transition the marking
+			// m_1 = m_0 - (pre t) + (post t)
+			updateMarking(t.pre, t.post);
+		});
+
+	// update new
+	transitionSvg.attr({
+		fill: function(d) {
+			return isEnabled(d.pre) ? 'rgba(0,0,255,.3)' : 'rgba(0,0,0,.3)';
+		},
+		cursor: function(d){
+			return isEnabled(d.pre) ? 'pointer' : 'default';
+		},
+		x: function(d) { return d.x - w - .5},
+		y: function(d) { return d.y - h - .5}
+	});
+
+	// remove on exit
+	transitionSvg.exit().remove();
+
+}
+
+function redrawTokens()
+{
+	var tokenSvg = tokensG
+		.selectAll("circle")
+		.data(tokens());
+	
+	tokenSvg.enter()
+		.append("circle");
+
+	tokenSvg.attr({
+		visibility: function(d){
+			return (d.tokens == 0) ? 'hidden' : 'visible'
+		},
+		cx: function(d) {
+			return _.find(states, 'label', d.state).x - .5;
+		},
+		cy: function(d) {
+			return _.find(states, 'label', d.state).y - .5;
+		},
+		r: 3,
+		fill: 'black',
+		stroke: 'none'
+	})
+		
+	tokenSvg.exit()
+		.remove();
+}
+
+function redraw(){
+	redrawTokens();
+	redrawTransitions();
+}
+
+redraw();

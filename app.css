@@ -2,15 +2,12 @@ svg {
 	border: 1px dashed gray;
 }
 
+/*
 circle {
 	cursor: help;
 }
+*/
 
-rect {
-	cursor: pointer;
-}
-
-// disable text selection
 svg *::selection {
 	background: transparent;
 }
