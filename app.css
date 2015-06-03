@@ -2,11 +2,11 @@ svg {
 	border: 1px dashed gray;
 }
 
-/*
-circle {
-	cursor: help;
+body {
+	font-family: monospace;
+	font-size: 1.1em;
+	fill: orange;
 }
-*/
 
 svg *::selection {
 	background: transparent;

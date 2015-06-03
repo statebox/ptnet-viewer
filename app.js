@@ -136,25 +136,27 @@ function redrawTransitions()
 function redrawTokens()
 {
 	var tokenSvg = tokensG
-		.selectAll("circle")
+		.selectAll("text")
 		.data(tokens());
 	
 	tokenSvg.enter()
-		.append("circle");
+		.append("text");
 
 	tokenSvg.attr({
 		visibility: function(d){
 			return (d.tokens == 0) ? 'hidden' : 'visible'
 		},
-		cx: function(d) {
+		x: function(d) {
 			return _.find(states, 'label', d.state).x - .5;
 		},
-		cy: function(d) {
+		y: function(d) {
 			return _.find(states, 'label', d.state).y - .5;
 		},
-		r: 3,
-		fill: 'black',
-		stroke: 'none'
+		dx: -r/2 + .5,
+		dy: r/2 - .5
+	})
+	.text(function(d) {
+			return d.tokens;
 	})
 		
 	tokenSvg.exit()
