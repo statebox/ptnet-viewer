@@ -7,7 +7,9 @@ body {
 	font-size: 1.1em;
 	fill: orange;
 }
-
+svg text {
+	fill: black;
+}
 svg *::selection {
 	background: transparent;
 }
