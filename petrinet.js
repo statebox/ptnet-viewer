@@ -1,4 +1,4 @@
-function isEnabled (pre) {
+function isEnabled (pre, marking) {
   return _(pre).all(function (multiplicity, place) {
     return (marking[place] || 0) >= multiplicity
   })
@@ -29,9 +29,33 @@ function updateMarking (remove, add) {
   redraw()
 }
 
-function arcs (transitions) {
+  // take a multiset dictionary 'label => multiplicity'
+  // and return a list of [{x, y, weight}]
+  function mapLocations (mset, states) {
+    return _.map(mset,
+      function (multiplicity, label) {
+        var s = _.find(states, 'label', label)
+        return {
+          x: s.x,
+          y: s.y,
+          weight: multiplicity
+        }
+      }
+    )
+  }
+
+function tokens(marking) {
+  return _.map(marking, function(val, key) {
+    return {
+      state: key,
+      tokens: val
+    };
+  });
+}
+
+function arcs (transitions, states) {
   return transitions.reduce(function (arcs, t) {
-    var incoming = mapLocations(t.pre).map(function (arc) {
+    var incoming = mapLocations(t.pre, states).map(function (arc) {
       return {
         x1: arc.x,
         y1: arc.y,
@@ -42,7 +66,7 @@ function arcs (transitions) {
       }
     })
 
-    var outgoing = mapLocations(t.post).map(function (arc) {
+    var outgoing = mapLocations(t.post, states).map(function (arc) {
       return {
         x1: t.x,
         y1: t.y,
