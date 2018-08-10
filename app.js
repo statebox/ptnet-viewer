@@ -3,31 +3,6 @@ function drawNet_(container, states, transitions, marking, width, height) {
   var w = 10;
   var h = 10;
 
-  function updateMarking(remove, add) {
-    // don't do anything if it's not enabled
-    if (!isEnabled(remove, marking)) {
-      return;
-    }
-
-    _.each(add, function(multiplicity, place) {
-      if (!marking[place]) {
-        marking[place] = 0;
-      }
-
-      marking[place] += multiplicity;
-    });
-
-    _.each(remove, function(multiplicity, place) {
-      if (!marking[place]) {
-        marking[place] = 0;
-      }
-
-      marking[place] -= multiplicity;
-    });
-
-    redraw();
-  }
-
   var svg = d3
     .select(container)
     .append("svg")
@@ -109,7 +84,6 @@ function drawNet_(container, states, transitions, marking, width, height) {
 
   var transitionG = svg.append("g");
 
-
   var tokensG = svg.append("g");
 
   function redrawTransitions() {
@@ -127,7 +101,8 @@ function drawNet_(container, states, transitions, marking, width, height) {
       .on("click", function(t) {
         // transition the marking
         // m_1 = m_0 - (pre t) + (post t)
-        updateMarking(t.pre, t.post);
+        updateMarking(t.pre, t.post, marking);
+        redraw();
       });
 
     // update new
@@ -206,17 +181,13 @@ function drawNet(container, states, transitions, marking){
     updateBoundary(el.x, el.y)
   })
 
-  // account for diameter of places and transitions
-  // add padding
   var width  = Math.abs(boundary[1] - boundary[0])
   var height = Math.abs(boundary[3] - boundary[2])
 
   // find top left corner vector and subtract it from all points
   var v = { x: boundary[0], y: boundary[2] }
 
-  // translate all points to accommodate padding and radius (radius is 10 so add 20 to have 10px of padding)
   radiusShift = 20
-
   function translateData(data, radiusShift){
     _.forEach(data, function(el){
       el.x = el.x - v.x + radiusShift
@@ -229,12 +200,10 @@ function drawNet(container, states, transitions, marking){
   var translatedTransitions = translateData(transitions, radiusShift)
   var translatedMarking     = translateData(marking, radiusShift)
 
-  // compute height
   var padding = 40
   var computedHeight = height + padding
   var computedWidth  = width + padding
 
-  // call main draw net function
   drawNet_(container, translatedStates, translatedTransitions, translatedMarking, computedWidth, computedHeight)
 }
 

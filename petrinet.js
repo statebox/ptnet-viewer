@@ -4,9 +4,9 @@ function isEnabled (pre, marking) {
   })
 }
 
-function updateMarking (remove, add) {
+function updateMarking (remove, add, marking) {
   // don't do anything if it's not enabled
-  if (!isEnabled(remove)) {
+  if (!isEnabled(remove, marking)) {
 		return
 	}
 
@@ -25,8 +25,6 @@ function updateMarking (remove, add) {
 
     marking[place] -= multiplicity
   })
-
-  redraw()
 }
 
   // take a multiset dictionary 'label => multiplicity'
